@@ -4,9 +4,11 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(LocationTracker.self) private var tracker
+    @Environment(BackupManager.self) private var backup
     @Environment(\.modelContext) private var context
     @Query(sort: \LocationPoint.timestamp, order: .reverse) private var points: [LocationPoint]
     @State private var confirmClear = false
+    @State private var pickingFolder = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +26,34 @@ struct ContentView: View {
                     if tracker.authorization == .authorizedWhenInUse {
                         Text("Set location access to “Always” in Settings so logging continues in the background.")
                     }
+                }
+
+                Section {
+                    if backup.isConfigured {
+                        LabeledContent("Folder", value: backup.folderName ?? "–")
+                        LabeledContent("Last backup", value: backup.lastBackup?
+                            .formatted(date: .abbreviated, time: .shortened) ?? "Never")
+                        Button("Back up now") { backup.backupNow() }
+                        Button("Change folder…") { pickingFolder = true }
+                        Button("Turn off backup", role: .destructive) { backup.removeFolder() }
+                    } else {
+                        Button {
+                            pickingFolder = true
+                        } label: {
+                            Label("Choose backup folder…", systemImage: "icloud.and.arrow.up")
+                        }
+                    }
+                } header: {
+                    Text("Hourly backup")
+                } footer: {
+                    if let error = backup.lastError {
+                        Text("Backup failed: \(error)").foregroundStyle(.red)
+                    } else {
+                        Text("Saves all points as one file, locations.csv, in the chosen folder (e.g. in iCloud Drive). It is overwritten every hour while the app is running.")
+                    }
+                }
+                .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
+                    if case .success(let url) = result { backup.setFolder(url) }
                 }
 
                 Section("Log (local time)") {
@@ -65,19 +95,11 @@ struct ContentView: View {
     }
 }
 
-/// CSV with timestamps in local time incl. UTC offset, e.g. 2026-11-17T14:03:00+01:00
+/// Share-sheet wrapper for the CSV export.
 struct CSVExport: Transferable {
     let csv: String
 
-    init(_ points: [LocationPoint]) {
-        let fmt = ISO8601DateFormatter()
-        fmt.timeZone = .current
-        var csv = "time_local,latitude,longitude,accuracy_m\n"
-        for p in points.sorted(by: { $0.timestamp < $1.timestamp }) {
-            csv += "\(fmt.string(from: p.timestamp)),\(p.latitude),\(p.longitude),\(p.accuracy)\n"
-        }
-        self.csv = csv
-    }
+    init(_ points: [LocationPoint]) { csv = LocationCSV.make(points) }
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .commaSeparatedText) { export in

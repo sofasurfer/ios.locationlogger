@@ -5,6 +5,7 @@ import SwiftUI
 struct LocationLoggerApp: App {
     let container: ModelContainer
     @State private var tracker: LocationTracker
+    @State private var backup: BackupManager
     @State private var tab = CommandLine.arguments.contains("-openMap") ? 1 : 0
 
     init() {
@@ -14,6 +15,7 @@ struct LocationLoggerApp: App {
         if CommandLine.arguments.contains("-seedDemoData") { Self.seedDemoData(container.mainContext) }
         #endif
         _tracker = State(initialValue: LocationTracker(context: container.mainContext))
+        _backup = State(initialValue: BackupManager(context: container.mainContext))
     }
 
     var body: some Scene {
@@ -27,6 +29,7 @@ struct LocationLoggerApp: App {
                     .tag(1)
             }
             .environment(tracker)
+            .environment(backup)
         }
         .modelContainer(container)
     }

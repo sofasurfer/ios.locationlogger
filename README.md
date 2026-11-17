@@ -16,6 +16,7 @@ A small iOS app that logs your GPS position in the background and keeps the data
   time_local,latitude,longitude,accuracy_m
   2026-11-17T14:49:32+01:00,47.3769,8.5417,5.0
   ```
+- **Hourly backup.** Choose a folder once, for example in iCloud Drive. The app then overwrites a single `locations.csv` there every hour while it's running (which includes the background while tracking). Use **Back up now** to save immediately. This works with a free Apple developer account because it doesn't use an iCloud container.
 - **Private.** No account, no server and no analytics. Data stays on the device unless you export it.
 
 ## Requirements
@@ -48,6 +49,7 @@ The tracking state is saved in `UserDefaults`. When the app launches, tracking r
 - If you swipe the app away in the app switcher, continuous updates stop. Logging resumes once iOS relaunches the app after a significant move, or when you open it again.
 - After a phone restart, iOS may require the phone to be unlocked once before the app can be relaunched.
 - GPS running all the time uses noticeable battery.
+- With a free Apple developer account, the app's signing expires after 7 days. After that it won't launch, and won't log, until you run it from Xcode again.
 - On the timeline, the slider moves from point to point, not by clock time. A long stay at one place is a single point.
 
 ## Storage
@@ -64,6 +66,7 @@ LocationLogger/
     ├── LocationPoint.swift     # SwiftData model: timestamp, latitude, longitude, accuracy
     ├── LocationTracker.swift   # CoreLocation logic: permissions, background updates, save rules
     ├── ContentView.swift       # Log tab: start/stop, list, delete, CSV export
+    ├── BackupManager.swift     # Hourly CSV backup to a user-picked folder + CSV builder
     ├── PointMapView.swift      # Map for a single log entry
     ├── TimelineMapView.swift   # Map tab: day route with time slider and playback
     └── Assets.xcassets/        # App icon
